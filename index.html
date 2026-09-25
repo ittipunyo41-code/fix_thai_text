@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมแก้อักษรเพี้ยน / สระลอย V2 (Offline Thai Fixer)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            text-align: center;
+        }
+        .box-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #34495e;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        .btn-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.copy-btn {
+            background-color: #2ecc71;
+            margin-left: 10px;
+        }
+        button.copy-btn:hover {
+            background-color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>เครื่องมือแก้อักษรเพี้ยน & สระลอย V2</h2>
+    
+    <div class="box-group">
+        <label for="inputText">วางข้อความที่เพี้ยน/สระลอยที่นี่:</label>
+        <textarea id="inputText" placeholder="วางข้อความต้นฉบับจาก PDF..."></textarea>
+    </div>
+
+    <div class="btn-container">
+        <button onclick="fixThaiText()">แก้ไขสระลอยและอักขระเพี้ยน</button>
+        <button class="copy-btn" onclick="copyResult()">คัดลอกผลลัพธ์</button>
+    </div>
+
+    <div class="box-group">
+        <label for="outputText">ผลลัพธ์ที่แก้ไขแล้ว:</label>
+        <textarea id="outputText"></textarea>
+    </div>
+</div>
+
+<script>
+function fixThaiText() {
+    let text = document.getElementById('inputText').value;
+
+    if (!text) {
+        alert('กรุณากรอกหรือวางข้อความที่ต้องการแก้ไขก่อนครับ');
+        return;
+    }
+
+    // 1. แปลงรหัสอักขระ PUA (Private Use Area) ที่ฟอนต์ PDF ใช้หลบตำแหน่ง กลับเป็นตัวอักษรไทยปกติ
+    const puaMap = {
+        '\uF700': 'ฐ', '\uF701': 'ิ', '\uF702': 'ี', '\uF703': 'ึ', '\uF704': 'ื',
+        '\uF705': '่', '\uF706': '้', '\uF707': '๊', '\uF708': '๋', '\uF709': '์',
+        '\uF70A': '่', '\uF70B': '้', '\uF70C': '๊', '\uF70D': '๋', '\uF70E': '์',
+        '\uF70F': 'ญ', '\uF710': 'ั', '\uF711': 'ํ', '\uF712': '็', '\uF713': '่', '\uF714': '้'
+    };
+    
+    // แทนที่ PUA Characters ทั้งหมด
+    text = text.replace(/[\uF700-\uF714]/g, match => puaMap[match]);
+
+    // 2. ซ่อมแซมสระอำ (รวม นิคหิต ํ + สระอา า -> สระอำ ำ) และลบเว้นวรรคที่คั่นอยู่
+    text = text.replace(/ํ\s*า/g, 'ำ');
+    text = text.replace(/\u0E4D\s*\u0E32/g, 'ำ');
+
+    // 3. ซ่อมแซมสระ/วรรณยุกต์ที่ถูกแยกด้วยช่องว่าง (Whitespace)
+    text = text.replace(/([ก-ฮฤฤๅฦฦๅ])\s+([่้๊๋็์ิีึืุูัํ])/g, '$1$2'); // พยัญชนะ + (ช่องว่าง) + สระ/วรรณยุกต์
+    text = text.replace(/([ิีึืุูัํ])\s+([่้๊๋์])/g, '$1$2'); // สระ + (ช่องว่าง) + วรรณยุกต์
+
+    // 4. สลับตำแหน่งวรรณยุกต์และสระให้ถูกต้องตามหลักภาษาไทย
+    // กรณีที่วรรณยุกต์มาก่อนสระ (เช่น พยัญชนะ + ไม้เอก + สระอิ) ให้สลับเป็น พยัญชนะ + สระอิ + ไม้เอก
+    text = text.replace(/([ก-ฮฤฤๅฦฦๅ])([่้๊๋])([ิีึืุูัํ])/g, '$1$3$2');
+
+	// 5. แก้ปัญหาสระอำที่มีสระอาพ่วงท้าย (เช่น ดำาเนิน -> ดำเนิน)
+text = text.replace(/ำา/g, 'ำ');
+
+	// 6. แก้ปัญหาวรรณยุกต์กระโดดมีเว้นวรรคคั่น (เช่น ทั ้ง -> ทั้ง, นั ้น -> นั้น)
+	// ดักจับรูปแบบ: พยัญชนะ + สระบน/ล่าง + ช่องว่าง + วรรณยุกต์
+text = text.replace(/([ก-ฮ])([ัิีึืุู])\s+([่้๊๋])/g, '$1$2$3');
+
+
+    // 7. แก้ปัญหาเว้นวรรคแทรกหลังไม้หันอากาศ (เช่น ปั ส -> ปัส, รั ค -> รัค)
+    // เนื่องจากไม้หันอากาศต้องมีตัวสะกดติดกันเสมอ การมีเว้นวรรคจึงผิดแน่นอน
+    text = text.replace(/([ก-ฮ])(ั)\s+([ก-ฮ])/g, '$1$2$3');
+
+    // 8. แก้คำผิดเฉพาะจุด (พยัญชนะ/สระงอกเกินจากการสแกน)
+    text = text.replace(/อัธยาอาศัย/g, 'อัธยาศัย');
+
+    document.getElementById('outputText').value = text;
+}
+
+function copyResult() {
+    let outputText = document.getElementById('outputText');
+    outputText.select();
+    outputText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(outputText.value).then(() => {
+        alert('คัดลอกผลลัพธ์เรียบร้อยแล้ว!');
+    }).catch(err => {
+        alert('กรุณาคัดลอกด้วยตนเอง');
+    });
+}
+</script>
+
+</body>
+</html>
