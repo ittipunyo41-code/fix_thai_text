@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมแก้อักษรเพี้ยน / สระลอย V2 (Offline Thai Fixer)</title>
+    <title>โปรแกรมแก้อักษรเพี้ยน / สระลอย V2.1 (Offline Thai Fixer)</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -75,7 +75,7 @@
 <body>
 
 <div class="container">
-    <h2>เครื่องมือแก้อักษรเพี้ยน & สระลอย V2</h2>
+    <h2>เครื่องมือแก้อักษรเพี้ยน & สระลอย V2.1</h2>
     
     <div class="box-group">
         <label for="inputText">วางข้อความที่เพี้ยน/สระลอยที่นี่:</label>
@@ -95,63 +95,82 @@
 
 <script>
 function fixThaiText() {
-    let text = document.getElementById('inputText').value;
-
-    if (!text) {
-        alert('กรุณากรอกหรือวางข้อความที่ต้องการแก้ไขก่อนครับ');
+    const input = document.getElementById('inputText').value;
+    if (!input.trim()) {
+        alert('กรุณาวางข้อความที่ต้องการแก้ไขก่อนครับ');
         return;
     }
+    let text = input;
 
-    // 1. แปลงรหัสอักขระ PUA (Private Use Area) ที่ฟอนต์ PDF ใช้หลบตำแหน่ง กลับเป็นตัวอักษรไทยปกติ
+    // 1. แปลงรหัส PUA (Private Use Area) กลับเป็นอักษรไทยปกติ
+    // ⚠️ หากพบ ฐ หรือ ญ ผิดปกติ ให้ตรวจสอบค่า \uF700 และ \uF70F
     const puaMap = {
         '\uF700': 'ฐ', '\uF701': 'ิ', '\uF702': 'ี', '\uF703': 'ึ', '\uF704': 'ื',
         '\uF705': '่', '\uF706': '้', '\uF707': '๊', '\uF708': '๋', '\uF709': '์',
         '\uF70A': '่', '\uF70B': '้', '\uF70C': '๊', '\uF70D': '๋', '\uF70E': '์',
         '\uF70F': 'ญ', '\uF710': 'ั', '\uF711': 'ํ', '\uF712': '็', '\uF713': '่', '\uF714': '้'
     };
-    
-    // แทนที่ PUA Characters ทั้งหมด
-    text = text.replace(/[\uF700-\uF714]/g, match => puaMap[match]);
+    text = text.replace(/[\uF700-\uF71F]/g, m => puaMap[m] || m);
 
-    // 2. ซ่อมแซมสระอำ (รวม นิคหิต ํ + สระอา า -> สระอำ ำ) และลบเว้นวรรคที่คั่นอยู่
-    text = text.replace(/ํ\s*า/g, 'ำ');
+    // 2. รวมสระอำที่แตก (นิคหิต + สระอา)
     text = text.replace(/\u0E4D\s*\u0E32/g, 'ำ');
 
-    // 3. ซ่อมแซมสระ/วรรณยุกต์ที่ถูกแยกด้วยช่องว่าง (Whitespace)
-    text = text.replace(/([ก-ฮฤฤๅฦฦๅ])\s+([่้๊๋็์ิีึืุูัํ])/g, '$1$2'); // พยัญชนะ + (ช่องว่าง) + สระ/วรรณยุกต์
-    text = text.replace(/([ิีึืุูัํ])\s+([่้๊๋์])/g, '$1$2'); // สระ + (ช่องว่าง) + วรรณยุกต์
+    // 3. ลบช่องว่างคั่นระหว่างพยัญชนะกับสระ/วรรณยุกต์
+    text = text.replace(/([ก-ฮ])\s+([่้๊๋็์ิีึืุูัําำ])/g, '$1$2');
+    text = text.replace(/([ิีึืุูั็ํ])\s+([่้๊๋์])/g, '$1$2');
 
-    // 4. สลับตำแหน่งวรรณยุกต์และสระให้ถูกต้องตามหลักภาษาไทย
-    // กรณีที่วรรณยุกต์มาก่อนสระ (เช่น พยัญชนะ + ไม้เอก + สระอิ) ให้สลับเป็น พยัญชนะ + สระอิ + ไม้เอก
-    text = text.replace(/([ก-ฮฤฤๅฦฦๅ])([่้๊๋])([ิีึืุูัํ])/g, '$1$3$2');
+    // 4. ลบช่องว่างหลังสระนำ (เ แ โ ใ ไ) — ปัญหาที่พบบ่อยที่สุด
+    text = text.replace(/([เแโใไ])\s+([ก-ฮ])/g, '$1$2');
 
-	// 5. แก้ปัญหาสระอำที่มีสระอาพ่วงท้าย (เช่น ดำาเนิน -> ดำเนิน)
-text = text.replace(/ำา/g, 'ำ');
+    // 5. ไม้หันอากาศต้องติดตัวสะกดเสมอ
+    text = text.replace(/([ก-ฮ])ั\s+([ก-ฮ])/g, '$1ั$2');
 
-	// 6. แก้ปัญหาวรรณยุกต์กระโดดมีเว้นวรรคคั่น (เช่น ทั ้ง -> ทั้ง, นั ้น -> นั้น)
-	// ดักจับรูปแบบ: พยัญชนะ + สระบน/ล่าง + ช่องว่าง + วรรณยุกต์
-text = text.replace(/([ก-ฮ])([ัิีึืุู])\s+([่้๊๋])/g, '$1$2$3');
+    // 6. สลับลำดับ: วรรณยุกต์+สระ → สระ+วรรณยุกต์
+    text = text.replace(/([ก-ฮ])([่้๊๋])([ิีึืุูั])/g, '$1$3$2');
 
+    // 7. ลบสระอาเกินหลังสระอำ (ดำา → ดำ)
+    text = text.replace(/ำา/g, 'ำ');
 
-    // 7. แก้ปัญหาเว้นวรรคแทรกหลังไม้หันอากาศ (เช่น ปั ส -> ปัส, รั ค -> รัค)
-    // เนื่องจากไม้หันอากาศต้องมีตัวสะกดติดกันเสมอ การมีเว้นวรรคจึงผิดแน่นอน
-    text = text.replace(/([ก-ฮ])(ั)\s+([ก-ฮ])/g, '$1$2$3');
+    // 8. ลบวรรณยุกต์ซ้ำซ้อน
+    text = text.replace(/([่้๊๋])\1+/g, '$1');
 
-    // 8. แก้คำผิดเฉพาะจุด (พยัญชนะ/สระงอกเกินจากการสแกน)
-    text = text.replace(/อัธยาอาศัย/g, 'อัธยาศัย');
+    // 9. แก้คำผิดเฉพาะจุด
+    const wordFixes = [
+        [/อัธยาอาศัย/g, 'อัธยาศัย']
+    ];
+    wordFixes.forEach(([re, rep]) => {
+        text = text.replace(re, rep);
+    });
 
     document.getElementById('outputText').value = text;
 }
 
 function copyResult() {
-    let outputText = document.getElementById('outputText');
-    outputText.select();
-    outputText.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(outputText.value).then(() => {
+    const out = document.getElementById('outputText');
+    if (!out.value.trim()) {
+        alert('ยังไม่มีผลลัพธ์ กด "แก้ไขสระลอยและอักขระเพี้ยน" ก่อนครับ');
+        return;
+    }
+    out.select();
+    out.setSelectionRange(0, 99999);
+
+    // ทำงานได้ทั้ง https และไฟล์ในเครื่อง (file://)
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(out.value)
+            .then(() => alert('คัดลอกผลลัพธ์เรียบร้อยแล้ว!'))
+            .catch(() => fallbackCopy(out));
+    } else {
+        fallbackCopy(out);
+    }
+}
+
+function fallbackCopy(element) {
+    try {
+        document.execCommand('copy');
         alert('คัดลอกผลลัพธ์เรียบร้อยแล้ว!');
-    }).catch(err => {
-        alert('กรุณาคัดลอกด้วยตนเอง');
-    });
+    } catch (e) {
+        alert('ไม่สามารถคัดลอกอัตโนมัติได้ กรุณากด Ctrl+C หรือ Cmd+C ด้วยตนเองครับ');
+    }
 }
 </script>
 
