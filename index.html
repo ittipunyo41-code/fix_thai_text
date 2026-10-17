@@ -3,83 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมแก้อักษรเพี้ยน / สระลอย V2.1 (Offline Thai Fixer)</title>
+    <title>โปรแกรมแก้อักษรเพี้ยน / สระลอย V3.1 (Offline Thai Fixer)</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        h2 {
-            color: #2c3e50;
-            margin-top: 0;
-            text-align: center;
-        }
-        .box-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #34495e;
-        }
-        textarea {
-            width: 100%;
-            height: 200px;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 16px;
-            box-sizing: border-box;
-            resize: vertical;
-        }
-        .btn-container {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-        button.copy-btn {
-            background-color: #2ecc71;
-            margin-left: 10px;
-        }
-        button.copy-btn:hover {
-            background-color: #27ae60;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; margin-top: 0; text-align: center; }
+        .box-group { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: #34495e; }
+        label.inline { display: inline-block; font-weight: normal; margin-right: 15px; }
+        textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; resize: vertical; }
+        textarea.small { height: 80px; font-size: 14px; }
+        .btn-container { text-align: center; margin-bottom: 20px; }
+        button { background-color: #3498db; color: white; border: none; padding: 12px 25px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #2980b9; }
+        button.copy-btn { background-color: #2ecc71; margin-left: 10px; }
+        button.copy-btn:hover { background-color: #27ae60; }
+        .hint { font-size: 13px; color: #777; margin-top: 4px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>เครื่องมือแก้อักษรเพี้ยน & สระลอย V2.1</h2>
-    
+    <h2>เครื่องมือแก้อักษรเพี้ยน & สระลอย V3.1</h2>
+
     <div class="box-group">
         <label for="inputText">วางข้อความที่เพี้ยน/สระลอยที่นี่:</label>
         <textarea id="inputText" placeholder="วางข้อความต้นฉบับจาก PDF..."></textarea>
+    </div>
+
+    <div class="box-group">
+        <label class="inline"><input type="checkbox" id="paliMode" checked> กู้อักษรบาลีที่หาย (ญ, ฏฺ)</label>
+        <label class="inline"><input type="checkbox" id="dictMode" checked> กู้วรรณยุกต์/ทัณฑฆาตที่หาย (พจนานุกรมในตัว)</label>
+    </div>
+
+    <div class="box-group">
+        <label for="customFix">เพิ่มคำแก้เอง (บรรทัดละ 1 คู่ รูปแบบ คำผิด=คำถูก):</label>
+        <textarea id="customFix" class="small" placeholder="เช่น&#10;ทิศอีสาน=ทิศอีสาน"></textarea>
+        <div class="hint">คำที่ใส่เองจะถูกใช้ก่อนพจนานุกรมในตัว</div>
     </div>
 
     <div class="btn-container">
@@ -94,83 +54,132 @@
 </div>
 
 <script>
+// ---------- ค่าคงที่ (ใช้ \u เพื่อกันปัญหาอักขระประกอบ) ----------
+var CONS  = '\u0E01-\u0E2E';          // ก-ฮ
+var TONE  = '\u0E48\u0E49\u0E4A\u0E4B'; // ่ ้ ๊ ๋
+var ABOVE = '\u0E31\u0E34\u0E35\u0E36\u0E37\u0E47\u0E4D'; // ั ิ ี ึ ื ็ ํ
+var PHINTHU = '\u0E3A', THANTHAKHAT = '\u0E4C', SARA_AM = '\u0E33', NIKHAHIT = '\u0E4D', SARA_AA = '\u0E32';
+
+// ตาราง PUA ของฟอนต์ไทยเก่า (F700-F71A)
+var PUA = {
+    '\uF700':'\u0E10', // ฐ (ไม่มีเชิง)
+    '\uF701':'\u0E34','\uF702':'\u0E35','\uF703':'\u0E36','\uF704':'\u0E37',
+    '\uF705':'\u0E48','\uF706':'\u0E49','\uF707':'\u0E4A','\uF708':'\u0E4B','\uF709':'\u0E4C',
+    '\uF70A':'\u0E48','\uF70B':'\u0E49','\uF70C':'\u0E4A','\uF70D':'\u0E4B','\uF70E':'\u0E4C',
+    '\uF70F':'\u0E0D', // ญ (ไม่มีหาง)
+    '\uF710':'\u0E31','\uF711':'\u0E4D','\uF712':'\u0E47',
+    '\uF713':'\u0E48','\uF714':'\u0E49','\uF715':'\u0E4A','\uF716':'\u0E4B','\uF717':'\u0E4C',
+    '\uF718':'\u0E38','\uF719':'\u0E39','\uF71A':'\u0E3A'
+};
+
+// พจนานุกรมกู้อักษรที่หาย (regex, คำแทน) — ใช้ lookahead กันเติมซ้ำ
+var DICT = [
+    [/อัธยาอาศัย/g, 'อัธยาศัย'],
+    [/พระผูมีพระภาคเจา/g, 'พระผู้มีพระภาคเจ้า'],
+    [/ผูมีพระภาคเจา/g, 'ผู้มีพระภาคเจ้า'],
+    [/พระภาคเจา/g, 'พระภาคเจ้า'],
+    [/ผูมี/g, 'ผู้มี'],
+    [/ผูใด/g, 'ผู้ใด'],
+    [/เหลา/g, 'เหล่า'],
+    [/ยมกปาฏิหาริย(?![\u0E4C\u0E4D])/g, 'ยมกปาฏิหาริย์'],
+    [/บัลลังก(?![\u0E4C\u0E4D])/g, 'บัลลังก์'],
+    [/โพธิพฤกษ(?![\u0E4C\u0E4D])/g, 'โพธิพฤกษ์'],
+    [/ดูดวย/g, 'ดูด้วย'],
+    [/ดวยพระ/g, 'ด้วยพระ'],
+    [/แหง(?!น)/g, 'แห่ง'],
+    [/ทางดาน/g, 'ทางด้าน'],
+    [/กัลป(?![\u0E4C\u0E32])/g, 'กัลป์'],
+    [/ใหสัปดาห/g, 'ให้สัปดาห์'],
+    [/สัปดาห(?!\u0E4C)/g, 'สัปดาห์'],
+    [/ผานพนไป/g, 'ผ่านพ้นไป'],
+    [/หนอยหนึ่ง/g, 'หน่อยหนึ่ง'],
+    [/แลว/g, 'แล้ว'],
+    [/ไมได/g, 'ไม่ได้'],
+    [/มิได(?!\u0E49)/g, 'มิได้'],
+    [/จองดู/g, 'จ้องดู'],
+    [/อันเปน/g, 'อันเป็น'],
+    [/แตพระ/g, 'แต่พระ'],
+    [/สรางสม/g, 'สร้างสม']
+];
+
 function fixThaiText() {
-    const input = document.getElementById('inputText').value;
-    if (!input.trim()) {
-        alert('กรุณาวางข้อความที่ต้องการแก้ไขก่อนครับ');
-        return;
-    }
-    let text = input;
+    var input = document.getElementById('inputText').value;
+    if (!input.trim()) { alert('กรุณาวางข้อความที่ต้องการแก้ไขก่อนครับ'); return; }
+    var pali = document.getElementById('paliMode').checked;
+    var dict = document.getElementById('dictMode').checked;
+    var custom = document.getElementById('customFix').value;
+    document.getElementById('outputText').value = fixThai(input, pali, dict, custom);
+}
 
-    // 1. แปลงรหัส PUA (Private Use Area) กลับเป็นอักษรไทยปกติ
-    // ⚠️ หากพบ ฐ หรือ ญ ผิดปกติ ให้ตรวจสอบค่า \uF700 และ \uF70F
-    const puaMap = {
-        '\uF700': 'ฐ', '\uF701': 'ิ', '\uF702': 'ี', '\uF703': 'ึ', '\uF704': 'ื',
-        '\uF705': '่', '\uF706': '้', '\uF707': '๊', '\uF708': '๋', '\uF709': '์',
-        '\uF70A': '่', '\uF70B': '้', '\uF70C': '๊', '\uF70D': '๋', '\uF70E': '์',
-        '\uF70F': 'ญ', '\uF710': 'ั', '\uF711': 'ํ', '\uF712': '็', '\uF713': '่', '\uF714': '้'
-    };
-    text = text.replace(/[\uF700-\uF71F]/g, m => puaMap[m] || m);
+function fixThai(input, pali, dict, custom) {
+    var text = input;
 
-    // 2. รวมสระอำที่แตก (นิคหิต + สระอา)
-    text = text.replace(/\u0E4D\s*\u0E32/g, 'ำ');
+    // 1. แปลงรหัส PUA กลับเป็นอักษรไทยปกติ
+    text = text.replace(/[\uF700-\uF71F]/g, function (m) { return PUA[m] || m; });
+
+    // 2. รวมสระอำที่แตก (นิคหิต + สระอา) -> ำ (U+0E33)
+    text = text.replace(new RegExp(NIKHAHIT + '\\s*' + SARA_AA, 'g'), SARA_AM);
 
     // 3. ลบช่องว่างคั่นระหว่างพยัญชนะกับสระ/วรรณยุกต์
-    text = text.replace(/([ก-ฮ])\s+([่้๊๋็์ิีึืุูัําำ])/g, '$1$2');
-    text = text.replace(/([ิีึืุูั็ํ])\s+([่้๊๋์])/g, '$1$2');
+    text = text.replace(new RegExp('([' + CONS + '])[ \\t]+([' + TONE + THANTHAKHAT + ABOVE + '\\u0E38\\u0E39' + SARA_AM + PHINTHU + '])', 'g'), '$1$2');
+    text = text.replace(new RegExp('([' + ABOVE + '\\u0E38\\u0E39])[ \\t]+([' + TONE + THANTHAKHAT + '])', 'g'), '$1$2');
 
-    // 4. ลบช่องว่างหลังสระนำ (เ แ โ ใ ไ) — ปัญหาที่พบบ่อยที่สุด
-    text = text.replace(/([เแโใไ])\s+([ก-ฮ])/g, '$1$2');
+    // 4. ลบช่องว่างหลังสระนำ (เ แ โ ใ ไ)
+    text = text.replace(/([\u0E40-\u0E44])[ \t]+([\u0E01-\u0E2E])/g, '$1$2');
 
-    // 5. ไม้หันอากาศต้องติดตัวสะกดเสมอ
-    text = text.replace(/([ก-ฮ])ั\s+([ก-ฮ])/g, '$1ั$2');
+    // 5. ไม้หันอากาศต้องติดตัวสะกด
+    text = text.replace(new RegExp('([' + CONS + '])\\u0E31[ \\t]+([' + CONS + '])', 'g'), '$1\u0E31$2');
 
-    // 6. สลับลำดับ: วรรณยุกต์+สระ → สระ+วรรณยุกต์
-    text = text.replace(/([ก-ฮ])([่้๊๋])([ิีึืุูั])/g, '$1$3$2');
+    // 6. สลับลำดับ: วรรณยุกต์+สระบน/ล่าง -> สระ+วรรณยุกต์
+    text = text.replace(new RegExp('([' + CONS + '])([' + TONE + '])([\\u0E34-\\u0E39\\u0E31])', 'g'), '$1$3$2');
 
-    // 7. ลบสระอาเกินหลังสระอำ (ดำา → ดำ)
-    text = text.replace(/ำา/g, 'ำ');
+    // 7. ลบสระอาเกินหลังสระอำ
+    text = text.replace(/\u0E33\u0E32/g, SARA_AM);
 
     // 8. ลบวรรณยุกต์ซ้ำซ้อน
-    text = text.replace(/([่้๊๋])\1+/g, '$1');
+    text = text.replace(new RegExp('([' + TONE + '])\\1+', 'g'), '$1');
 
-    // 9. แก้คำผิดเฉพาะจุด
-    const wordFixes = [
-        [/อัธยาอาศัย/g, 'อัธยาศัย']
-    ];
-    wordFixes.forEach(([re, rep]) => {
-        text = text.replace(re, rep);
-    });
+    // 9. กู้อักษรบาลีที่หายระหว่างคัดลอก
+    if (pali) {
+        // ญ หาย: (พยัญชนะ)ฺ(ช่องว่าง)จ -> (พยัญชนะ)ญฺจ  (ยกเว้น จฺจ และ ญฺจ ที่ถูกอยู่แล้ว)
+        text = text.replace(new RegExp('([' + CONS + '])' + PHINTHU + '[ \\t]*\\u0E08', 'g'), function (m, a) {
+            return (a === '\u0E08' || a === '\u0E0D') ? m : a + '\u0E0D' + PHINTHU + '\u0E08';
+        });
+        // ฏฺ หายหน้า ฐ: ฐ ที่ไม่ได้อยู่ต้นคำ/ไม่มี ฺ นำหน้า -> ฏฺฐ
+        text = text.replace(/([\u0E01-\u0E2E\u0E30-\u0E39\u0E40-\u0E44\u0E4D])\u0E10/g, function (m, p) {
+            if (p === '\u0E31' || p === '\u0E1B' || p === '\u0E0F') return m; // รัฐ, ปฐม, ฏฺฐ
+            return p + '\u0E0F' + PHINTHU + '\u0E10';
+        });
+    }
 
-    document.getElementById('outputText').value = text;
+    // 10. คำแก้เอง + พจนานุกรม
+    if (custom) {
+        custom.split(/\r?\n/).forEach(function (line) {
+            var i = line.indexOf('=');
+            if (i > 0) {
+                var a = line.slice(0, i).trim(), b = line.slice(i + 1).trim();
+                if (a) text = text.split(a).join(b);
+            }
+        });
+    }
+    if (dict) DICT.forEach(function (p) { text = text.replace(p[0], p[1]); });
+
+    return text;
 }
 
 function copyResult() {
-    const out = document.getElementById('outputText');
-    if (!out.value.trim()) {
-        alert('ยังไม่มีผลลัพธ์ กด "แก้ไขสระลอยและอักขระเพี้ยน" ก่อนครับ');
-        return;
-    }
+    var out = document.getElementById('outputText');
+    if (!out.value.trim()) { alert('ยังไม่มีผลลัพธ์ กด "แก้ไขสระลอยและอักขระเพี้ยน" ก่อนครับ'); return; }
     out.select();
     out.setSelectionRange(0, 99999);
-
-    // ทำงานได้ทั้ง https และไฟล์ในเครื่อง (file://)
     if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(out.value)
-            .then(() => alert('คัดลอกผลลัพธ์เรียบร้อยแล้ว!'))
-            .catch(() => fallbackCopy(out));
-    } else {
-        fallbackCopy(out);
-    }
+        navigator.clipboard.writeText(out.value).then(function () { alert('คัดลอกผลลัพธ์เรียบร้อยแล้ว!'); }).catch(function () { fallbackCopy(out); });
+    } else { fallbackCopy(out); }
 }
 
 function fallbackCopy(element) {
-    try {
-        document.execCommand('copy');
-        alert('คัดลอกผลลัพธ์เรียบร้อยแล้ว!');
-    } catch (e) {
-        alert('ไม่สามารถคัดลอกอัตโนมัติได้ กรุณากด Ctrl+C หรือ Cmd+C ด้วยตนเองครับ');
-    }
+    try { document.execCommand('copy'); alert('คัดลอกผลลัพธ์เรียบร้อยแล้ว!'); }
+    catch (e) { alert('ไม่สามารถคัดลอกอัตโนมัติได้ กรุณากด Ctrl+C หรือ Cmd+C ด้วยตนเองครับ'); }
 }
 </script>
 
