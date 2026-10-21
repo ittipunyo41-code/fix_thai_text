@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมแก้อักษรเพี้ยน / สระลอย V3.1 (Offline Thai Fixer)</title>
+    <title>โปรแกรมแก้อักษรเพี้ยน / สระลอย V3.2 (Offline Thai & Pali Fixer)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h2 { color: #2c3e50; margin-top: 0; text-align: center; }
         .box-group { margin-bottom: 20px; }
         label { display: block; font-weight: bold; margin-bottom: 8px; color: #34495e; }
-        label.inline { display: inline-block; font-weight: normal; margin-right: 15px; }
+        label.inline { display: inline-block; font-weight: normal; margin-right: 15px; cursor: pointer; }
         textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; resize: vertical; }
         textarea.small { height: 80px; font-size: 14px; }
         .btn-container { text-align: center; margin-bottom: 20px; }
@@ -24,21 +24,21 @@
 <body>
 
 <div class="container">
-    <h2>เครื่องมือแก้อักษรเพี้ยน & สระลอย V3.1</h2>
+    <h2>เครื่องมือแก้อักษรเพี้ยน & สระลอย V3.2 (รองรับบาลีขั้นสูง)</h2>
 
     <div class="box-group">
         <label for="inputText">วางข้อความที่เพี้ยน/สระลอยที่นี่:</label>
-        <textarea id="inputText" placeholder="วางข้อความต้นฉบับจาก PDF..."></textarea>
+        <textarea id="inputText" placeholder="วางข้อความต้นฉบับจาก PDF หรือฟอนต์บาลีที่เพี้ยน..."></textarea>
     </div>
 
     <div class="box-group">
-        <label class="inline"><input type="checkbox" id="paliMode" checked> กู้อักษรบาลีที่หาย (ญ, ฏฺ)</label>
+        <label class="inline"><input type="checkbox" id="paliMode" checked> กู้อักษรบาลีและพินทุ (ฏ, ฐ, ญ, ฬ, ฺ)</label>
         <label class="inline"><input type="checkbox" id="dictMode" checked> กู้วรรณยุกต์/ทัณฑฆาตที่หาย (พจนานุกรมในตัว)</label>
     </div>
 
     <div class="box-group">
         <label for="customFix">เพิ่มคำแก้เอง (บรรทัดละ 1 คู่ รูปแบบ คำผิด=คำถูก):</label>
-        <textarea id="customFix" class="small" placeholder="เช่น&#10;ทิศอีสาน=ทิศอีสาน"></textarea>
+        <textarea id="customFix" class="small" placeholder="เช่น&#10;ปฐาน=ปฏฺฐาน&#10;ทิศอีสาน=ทิศอีสาน"></textarea>
         <div class="hint">คำที่ใส่เองจะถูกใช้ก่อนพจนานุกรมในตัว</div>
     </div>
 
@@ -54,25 +54,25 @@
 </div>
 
 <script>
-// ---------- ค่าคงที่ (ใช้ \u เพื่อกันปัญหาอักขระประกอบ) ----------
+// ---------- ค่าคงที่ (ใช้ \u เพื่อป้องกันปัญหา encoding) ----------
 var CONS  = '\u0E01-\u0E2E';          // ก-ฮ
 var TONE  = '\u0E48\u0E49\u0E4A\u0E4B'; // ่ ้ ๊ ๋
 var ABOVE = '\u0E31\u0E34\u0E35\u0E36\u0E37\u0E47\u0E4D'; // ั ิ ี ึ ื ็ ํ
 var PHINTHU = '\u0E3A', THANTHAKHAT = '\u0E4C', SARA_AM = '\u0E33', NIKHAHIT = '\u0E4D', SARA_AA = '\u0E32';
 
-// ตาราง PUA ของฟอนต์ไทยเก่า (F700-F71A)
+// ตาราง PUA ของฟอนต์ไทยและบาลีเก่า (F700-F71A)
 var PUA = {
     '\uF700':'\u0E10', // ฐ (ไม่มีเชิง)
     '\uF701':'\u0E34','\uF702':'\u0E35','\uF703':'\u0E36','\uF704':'\u0E37',
     '\uF705':'\u0E48','\uF706':'\u0E49','\uF707':'\u0E4A','\uF708':'\u0E4B','\uF709':'\u0E4C',
     '\uF70A':'\u0E48','\uF70B':'\u0E49','\uF70C':'\u0E4A','\uF70D':'\u0E4B','\uF70E':'\u0E4C',
-    '\uF70F':'\u0E0D', // ญ (ไม่มีหาง)
+    '\uF70F':'\u0E0D', // ญ (ไม่มีเชิง)
     '\uF710':'\u0E31','\uF711':'\u0E4D','\uF712':'\u0E47',
     '\uF713':'\u0E48','\uF714':'\u0E49','\uF715':'\u0E4A','\uF716':'\u0E4B','\uF717':'\u0E4C',
     '\uF718':'\u0E38','\uF719':'\u0E39','\uF71A':'\u0E3A'
 };
 
-// พจนานุกรมกู้อักษรที่หาย (regex, คำแทน) — ใช้ lookahead กันเติมซ้ำ
+// พจนานุกรมกู้อักษรไทย/บาลีที่หายบ่อย
 var DICT = [
     [/อัธยาอาศัย/g, 'อัธยาศัย'],
     [/พระผูมีพระภาคเจา/g, 'พระผู้มีพระภาคเจ้า'],
@@ -139,17 +139,62 @@ function fixThai(input, pali, dict, custom) {
     // 8. ลบวรรณยุกต์ซ้ำซ้อน
     text = text.replace(new RegExp('([' + TONE + '])\\1+', 'g'), '$1');
 
-    // 9. กู้อักษรบาลีที่หายระหว่างคัดลอก
+    // 9. ระบบกู้อักษรบาลีและพินทุ (ฺ) ขั้นสูง (ฏ, ฐ, ญ, ฬ, ฺ)
     if (pali) {
-        // ญ หาย: (พยัญชนะ)ฺ(ช่องว่าง)จ -> (พยัญชนะ)ญฺจ  (ยกเว้น จฺจ และ ญฺจ ที่ถูกอยู่แล้ว)
-        text = text.replace(new RegExp('([' + CONS + '])' + PHINTHU + '[ \\t]*\\u0E08', 'g'), function (m, a) {
-            return (a === '\u0E08' || a === '\u0E0D') ? m : a + '\u0E0D' + PHINTHU + '\u0E08';
+        // --- 9.1 จัดการ พินทุ (ฺ) และช่องว่าง ---
+        text = text.replace(new RegExp('([' + CONS + '])[ \\t]+' + PHINTHU, 'g'), '$1' + PHINTHU);
+        text = text.replace(new RegExp(PHINTHU + '[ \\t]+([' + CONS + '])', 'g'), PHINTHU + '$1');
+        text = text.replace(new RegExp(PHINTHU + '+', 'g'), PHINTHU); // ลบพินทุซ้ำ
+        
+        // ในภาษาบาลี ถ้าพยัญชนะมีสระแล้ว จะต้องไม่มีพินทุ (ลบพินทุส่วนเกินออก)
+        text = text.replace(new RegExp('([' + ABOVE + '\\u0E38\\u0E39])' + PHINTHU, 'g'), '$1');
+        text = text.replace(new RegExp(PHINTHU + '([' + ABOVE + '\\u0E38\\u0E39])', 'g'), '$1');
+
+        // --- 9.2 จัดการกลุ่ม ฏฺฐ และ ฐ ---
+        // รวบ ฏ ฐ หรือ ฏ ฺ ฐ ที่หลุดช่องว่าง ให้เป็น ฏฺฐ
+        text = text.replace(/\u0E0F[ \t]*\u0E3A?[ \t]*\u0E10/g, '\u0E0F\u0E3A\u0E10');
+
+        // กู้กลุ่มศัพท์บาลีที่มักเสียตัว ฏฺ หน้า ฐ (เช่น ปฐาย -> ปฏฺฐาย, ปฐาน -> ปฏฺฐาน)
+        var paliTthaFixes = [
+            [/ปฐาย/g, 'ปฏฺฐาย'],
+            [/ปฐาน/g, 'ปฏฺฐาน'],
+            [/ปฐิ/g, 'ปฏฺฐิ'],
+            [/อฐกถา/g, 'อฏฺฐกถา'],
+            [/อฐิก/g, 'อฏฺฐิก'],
+            [/ทิฐิ/g, 'ทิฏฺฐิ'],
+            [/เสฐ/g, 'เสฏฺฐ'],
+            [/นิฐิ/g, 'นิฏฺฐิ'],
+            [/สิฐ/g, 'สิฏฺฐ'],
+            [/วิฐา/g, 'วิฏฺฐา'],
+            [/อธิฐา/g, 'อธิฏฺฐาน'],
+            [/ปาฏโภค/g, 'ปาฏฺโภค']
+        ];
+        paliTthaFixes.forEach(function(item) { text = text.replace(item[0], item[1]); });
+
+        // --- 9.3 จัดการกลุ่ม ญ และ ญฺ (พยัญชนะวรรค จะ) ---
+        // เติม พินทุ ให้ ญ สังโยค: ญญ -> ญฺญ, ญจ -> ญฺจ, ญฉ -> ญฺฉ, ญช -> ญฺช, ญฌ -> ญฺฌ
+        text = text.replace(/\u0E0D([ \t]*)([\u0E08\u0E09\u0E0A\u0E0B\u0E0D])/g, function(m, space, nextChar) {
+            return '\u0E0D' + PHINTHU + nextChar;
         });
-        // ฏฺ หายหน้า ฐ: ฐ ที่ไม่ได้อยู่ต้นคำ/ไม่มี ฺ นำหน้า -> ฏฺฐ
-        text = text.replace(/([\u0E01-\u0E2E\u0E30-\u0E39\u0E40-\u0E44\u0E4D])\u0E10/g, function (m, p) {
-            if (p === '\u0E31' || p === '\u0E1B' || p === '\u0E0F') return m; // รัฐ, ปฐม, ฏฺฐ
-            return p + '\u0E0F' + PHINTHU + '\u0E10';
+
+        // กรณีตัว ญ หาย เหลือแต่ พินทุ หน้า จ, ฉ, ช, ฌ, ญ (เช่น ...ฺจ -> ...ญฺจ)
+        text = text.replace(new RegExp('([' + CONS + '])' + PHINTHU + '([\\u0E08\\u0E09\\u0E0A\\u0E0B\\u0E0D])', 'g'), function(m, c, next) {
+            if (c === '\u0E0D' || c === '\u0E08') return m;
+            return c + '\u0E0D' + PHINTHU + next;
         });
+
+        // แก้ศัพท์ ญ ที่โดนตัดพินทุบ่อยๆ
+        text = text.replace(/ปญญา/g, 'ปญฺญา');
+        text = text.replace(/สญญา/g, 'สญฺญา');
+        text = text.replace(/สญเจตนา/g, 'สญฺเจตนา');
+        text = text.replace(/ปญจ/g, 'ปญฺจ');
+        text = text.replace(/ตญจ/g, 'ตญฺจ');
+        text = text.replace(/กตญญู/g, 'กตญฺญู');
+
+        // --- 9.4 จัดการกลุ่ม ฬ และ ฬฺ ---
+        text = text.replace(/\u0E2B[ \t]*\u0E3A/g, '\u0E2B\u0E3A'); // รวบ ฬ กับ ฺ ที่มีช่องว่าง
+        text = text.replace(/กฬหา/g, 'กฬฺหา');
+        text = text.replace(/กาฬห/g, 'กาฬฺห');
     }
 
     // 10. คำแก้เอง + พจนานุกรม
