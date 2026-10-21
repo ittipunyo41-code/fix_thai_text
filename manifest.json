@@ -1,0 +1,18 @@
+{
+  "name": "เครื่องมือแก้อักษรเพี้ยน & สระลอยบาลี V3.2",
+  "short_name": "PaliFixer",
+  "description": "โปรแกรมแก้ไขสระลอยและอักขระบาลีเพี้ยนแบบ Offline PWA",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f7f6",
+  "theme_color": "#3498db",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
